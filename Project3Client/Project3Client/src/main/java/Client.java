@@ -5,6 +5,8 @@ import java.io.Serializable;
 import java.net.Socket;
 import java.util.function.Consumer;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+
 
 
 
@@ -16,6 +18,7 @@ public class Client extends Thread{
 	ObjectOutputStream out;
 	ObjectInputStream in;
 	TextArea chatLog;
+	TextField chatInput;
 	boolean	selfMessage = false;
 
 	public Client(TextArea chatLog) {
@@ -39,6 +42,11 @@ public class Client extends Thread{
 			try {
 				String message = in.readObject().toString();
 				System.out.println(message);
+
+				if (message.equals("WAIT_FOR_PLAYERS")) {
+					chatLog.appendText("yo wait yo turn");
+				}
+
 				if (!selfMessage){
 					chatLog.appendText("Other: " + message + "\n");
 				}

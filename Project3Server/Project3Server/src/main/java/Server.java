@@ -16,6 +16,7 @@ import java.util.List;
 public class Server{
 
 
+
 //	private List<String> clientsUsernames = new ArrayList<>();
 //
 //	public boolean isUsernameTaken(String username) {
@@ -25,6 +26,8 @@ public class Server{
 	int count = 1;	
 	ArrayList<ClientThread> clients = new ArrayList<ClientThread>();
 	TheServer server;
+
+	int currentTurnIndex = 0;
 
 
 	
@@ -50,6 +53,7 @@ public class Server{
 				c.start();
 				
 				count++;
+
 				
 			    }
 			} catch(Exception e) {
@@ -61,7 +65,7 @@ public class Server{
 
 		class ClientThread extends Thread{
 			
-		
+			int playerNum;
 			Socket connection;
 			int count;
 			String username;
@@ -69,10 +73,19 @@ public class Server{
 			List <String> arrayList = new ArrayList<>();
 
 			ObjectOutputStream out;
+
 			
 			ClientThread(Socket s, int count){
 				this.connection = s;
-				this.count = count;	
+				this.count = count;
+				this.playerNum = count - 1;
+			}
+			public void send(String data) {
+				try {
+					out.writeObject(data);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 			
 			public void updateClients(String message) {
@@ -108,14 +121,31 @@ public class Server{
 
 				System.out.println("Client #" + count + " set username to: " + username);
 				updateClients("new client on server: client #" + count);
+
+				synchronized(clients) { // prevent concurrent access issues
+					if (clients.size() == 1) {
+						send("WAIT_FOR_PLAYERS");
+					} else if (clients.size() == 2) {
+						clients.get(currentTurnIndex).send("YOUR_TURN");
+						clients.get((currentTurnIndex + 1) % 2).send("WAIT");
+					}
+				}
 					
 				 while(true) {
 					    try {
 					    	String data = in.readObject().toString();
-					    	System.out.println("client: " + username + " sent: " + data);
-					    	updateClients("client #"+username+" said: "+data);
-					    	
-					    	}
+
+							if (clients.get(currentTurnIndex) == this) {
+								System.out.println("client: " + username + " sent: " + data);
+								updateClients("client #"+username+" said: "+data);
+								currentTurnIndex = (currentTurnIndex + 1) % 2;
+								clients.get(currentTurnIndex).send("YOUR_TURN");
+								clients.get((currentTurnIndex + 1) % 2).send("WAIT");
+							}else {
+								send("WAIT_YOUR_TURN");
+							}
+
+						}
 					    catch(Exception e) {
 					    	System.err.println("OOOOPPs...Something wrong with the socket from client: " + count + "....closing down!");
 					    	updateClients("Client #"+count+" has left the server!");
