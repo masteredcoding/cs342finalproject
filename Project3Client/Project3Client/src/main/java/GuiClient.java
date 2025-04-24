@@ -196,7 +196,7 @@ public class GuiClient extends Application{
 		// Start of menu
 		BorderPane menuBackground = new BorderPane();
 		menuBackground.setStyle("-fx-background-color: #373C3F;");
-		Text loginTitle = new Text("Logins");
+		Text loginTitle = new Text("Login");
 		TextField userNameInput = new TextField();
 		userNameInput.setPromptText("Enter unique username...");
 		userNameInput.setMaxWidth(150);
