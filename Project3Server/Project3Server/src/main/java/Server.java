@@ -17,7 +17,7 @@ public class Server{
 
 
 
-//	private List<String> clientsUsernames = new ArrayList<>();
+
 //
 //	public boolean isUsernameTaken(String username) {
 //		return clientsUsernames.contains(username);  // Check if username exists in the shared list
@@ -26,7 +26,7 @@ public class Server{
 	int count = 1;	
 	ArrayList<ClientThread> clients = new ArrayList<ClientThread>();
 	TheServer server;
-
+	private List<String> usernames  = new ArrayList<>();
 	int currentTurnIndex = 0;
 
 
@@ -108,8 +108,23 @@ public class Server{
 					out = new ObjectOutputStream(connection.getOutputStream());
 					connection.setTcpNoDelay(true);
 					username = in.readObject().toString();
+
+					synchronized (usernames) { // prevent race conditions
+						if (usernames.contains(username)) {
+							send("USERNAME_TAKEN"); // tell them it's already taken
+							connection.close(); // close the connection
+							return; // stop this thread
+						} else {
+							usernames.add(username); // add it to list if unique
+						}
+					}
+
 				}
 				catch(Exception e) {
+					clients.remove(this);
+					if (username != null) {
+						usernames.remove(username);
+					}
 					System.out.println("Streams not open");
 				}
 //				if (isUsernameTaken(username)) {
