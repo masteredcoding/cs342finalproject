@@ -15,7 +15,7 @@ import javafx.scene.text.Text;
 import javafx.scene.layout.HBox;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.control.Button;
-
+import java.util.Random;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
@@ -32,6 +32,14 @@ public class GuiClient extends Application{
 //		}
 		launch(args);
 	}
+	boolean vsBot = false;
+	int board[][] = new int[6][7];
+	Circle[][] boardCircles = new Circle[6][7]; // 0 will represent empty so we got a 6x7 with 0's
+	Button c1,c2,c3,c4,c5,c6,c7;
+	TextArea chatLog;
+	Text turn;
+	Button returnButton;
+
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
@@ -58,11 +66,12 @@ public class GuiClient extends Application{
 				circle.setFill(Color.WHITE);
 				circle.setStroke(Color.BLACK);
 				gameBoard.add(circle, c, r); // we use grid pane since it allows placement like a grid
+				boardCircles[r][c] = circle; // i am saving ref here
 			}
 		}
 		gameBoard.setAlignment(Pos.CENTER);
 		// end of gameboard
-		TextArea chatLog = new TextArea(); // allows us to append messages to best solution
+		chatLog = new TextArea(); // allows us to append messages to best solution
 		chatLog.setEditable(false);
 		chatLog.setWrapText(true);
 		chatLog.setPrefHeight(200);
@@ -84,7 +93,6 @@ public class GuiClient extends Application{
 		chatBox.setAlignment(Pos.CENTER);
 		chatBox.setMaxWidth(200);
 
-		Button c1,c2,c3,c4,c5,c6,c7;
 		c1 = new Button("DROP");
 		c2 = new Button("DROP");
 		c3 = new Button("DROP");
@@ -100,6 +108,13 @@ public class GuiClient extends Application{
 		c6.setStyle("-fx-font-weight: bold;");
 		c7.setStyle("-fx-font-weight: bold;");
 
+		c1.setOnAction(e -> dropPiece(0)); // parameter is the col u wanna drop to.
+		c2.setOnAction(e -> dropPiece(1));
+		c3.setOnAction(e -> dropPiece(2));
+		c4.setOnAction(e -> dropPiece(3));
+		c5.setOnAction(e -> dropPiece(4));
+		c6.setOnAction(e -> dropPiece(5));
+		c7.setOnAction(e -> dropPiece(6));
 
 		Image buttonHoverImg = new Image(getClass().getResource("/click.png").toString());
 		ImageView buttonView = new ImageView(buttonHoverImg);
@@ -174,17 +189,20 @@ public class GuiClient extends Application{
 		HBox boardAndChat = new HBox(20,pageLayout,chatBox);
 		boardAndChat.setAlignment(Pos.CENTER);
 
-		Text title = new Text("Player vs Player");
+		Text title = new Text("Bot vs Player");
 		title.setFill(Color.WHITE);
 		title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 		title.setStroke(Color.BLACK); // Outline color
 
-		Text turn = new Text("Your Turn");
+		turn = new Text("Deciding turn...");
 		turn.setFill(Color.RED);
 		turn.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 		turn.setStroke(Color.BLACK); // Outline color
 
-		VBox headerAndTurns = new VBox(20,title,turn,boardAndChat);
+
+		returnButton = new Button("Return to Menu");
+		returnButton.setVisible(false); // start hidden
+		VBox headerAndTurns = new VBox(20,title,turn,returnButton,boardAndChat);
 		headerAndTurns.setAlignment(Pos.CENTER);
 		headerAndTurns.setPadding(new Insets(0, 0, 90,0)); // top, right, bottom, left
 		headerAndTurns.setMargin(turn,new Insets(-20,0,0,0));
@@ -193,23 +211,59 @@ public class GuiClient extends Application{
 		Scene gameScene = new Scene(background, 800, 600);
 		// end of gameScene
 
-		// Start of menu
+
+		//start of selection page
+		BorderPane selectionBackground = new BorderPane();
+		selectionBackground.setStyle("-fx-background-color: #373C3F;");
+		Text selectionTitle = new Text("Choose your gamemode!");
+		Button aiPlayer = new Button("Bot vs Player");
+		Button lanPlay = new Button("Player vs Player");
+		Button howPlay = new Button("How to play?");
+		VBox selectionLayout = new VBox(20, selectionTitle,aiPlayer,lanPlay,howPlay);  // 20 is the spacing between elements
+		selectionLayout.setAlignment(Pos.CENTER);
+		selectionBackground.setCenter(selectionLayout);
+		Scene selectionScene = new Scene(selectionBackground, 800, 600);
+
+		returnButton.setOnAction(e -> {
+			primaryStage.setScene(selectionScene);
+			primaryStage.setTitle("Selection Menu");
+		});
+
+
+		aiPlayer.setOnAction(e -> {
+			vsBot = true;
+			primaryStage.setScene(gameScene);
+			primaryStage.setTitle("Connect 4: Bot vs Player");
+			primaryStage.show();
+		});
+
+		lanPlay.setOnAction(e -> {
+			vsBot = false;
+			primaryStage.setScene(gameScene);
+			primaryStage.setTitle("Connect 4: LAN Multiplayer");
+			primaryStage.show();
+		});
+
+
+
+
+		// Start of login
 		BorderPane menuBackground = new BorderPane();
 		menuBackground.setStyle("-fx-background-color: #373C3F;");
-		Text loginTitle = new Text("Login");
+		Text loginTitle = new Text("Hello, create a username!");
 		TextField userNameInput = new TextField();
 		userNameInput.setPromptText("Enter unique username...");
 		userNameInput.setMaxWidth(150);
 
 
-		Button login = new Button("Login");
+		Button login = new Button("Begin");
 
 		login.setOnAction(e -> {
 			String userName = userNameInput.getText();
 			clientThread.send(userName);
 
-			primaryStage.setScene(gameScene);  // Switch to the game scene
-			primaryStage.setTitle("Client Chat");
+			primaryStage.setScene(selectionScene);  // Switch to the game scene
+			primaryStage.setTitle("Selection Menu");
 			primaryStage.show();
 		});
 
@@ -223,5 +277,85 @@ public class GuiClient extends Application{
 		primaryStage.setScene(menuScene);
 		primaryStage.setTitle("Game Menu");
 		primaryStage.show();
+	}
+
+	void disableButtons(){
+		c1.setDisable(true);
+		c2.setDisable(true);
+		c3.setDisable(true);
+		c4.setDisable(true);
+		c5.setDisable(true);
+		c6.setDisable(true);
+		c7.setDisable(true);
+	}
+
+	//start of game logic
+	boolean checkForWin(int player){
+		// checking horizontally for win
+		for (int row = 0; row < 6; row++){
+			for (int col = 0; col < 4; col++){
+				if (board[row][col] == player && board[row][col+1] == player && board[row][col+2] == player && board[row][col+3] == player){
+					return true;
+				}
+			}
+		}
+
+		for (int row = 0; row < 3; row++){
+			for (int col = 0; col < 7; col++){
+				if (board[row][col] == player && board[row+1][col] == player && board[row+2][col] == player && board[row+3][col] == player){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+
+	int findEmptyRow(int col) {
+		for (int row = 5; row >= 0; row--) {
+			if (board[row][col] == 0) { // we find tha empty row in the col we put in 0 represents empty
+				return row; // return where row was empty
+			}
+		}
+		return -1;
+	}
+	void dropPiece(int col){
+		if (vsBot != true){ // if it is not a bot game we do not wanna be here bro
+			return;
+		}
+		int row = findEmptyRow(col);
+		if (row == -1){
+
+			chatLog.appendText("Spot is full..!");
+			return;
+		}
+
+		board[row][col] = 1; // 1 represents player piece
+		boardCircles[row][col].setFill(Color.RED);
+		if (checkForWin(1)){
+			turn.setText("You won!");
+			returnButton.setVisible(true);
+			disableButtons();
+			return;
+		}
+		turn.setText("Bot's Turn");
+
+		Random r = new Random();
+
+		int botCol = r.nextInt(7);
+		int botRow = findEmptyRow(botCol);
+
+		while (botRow == -1){
+			botCol = r.nextInt(7);
+			botRow = findEmptyRow(botCol);
+		}
+		board[botRow][botCol] = 2; // 2 represents bot piece this will help me in check win
+		boardCircles[botRow][botCol].setFill(Color.YELLOW);
+		if (checkForWin(2)){
+			returnButton.setVisible(true);
+			turn.setText("Bot won!");
+			return;
+		}
+		turn.setText("Your Turn");
 	}
 }
