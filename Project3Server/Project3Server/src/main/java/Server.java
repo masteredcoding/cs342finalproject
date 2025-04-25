@@ -135,12 +135,21 @@ public class Server{
 					    try {
 					    	String data = in.readObject().toString();
 
+							if (clients.size() < 2) {
+								send("WAIT_FOR_PLAYERS");
+								continue;
+							}
+
 							if (clients.get(currentTurnIndex) == this) {
 								System.out.println("client: " + username + " sent: " + data);
 								updateClients("client #"+username+" said: "+data);
-								currentTurnIndex = (currentTurnIndex + 1) % 2;
-								clients.get(currentTurnIndex).send("YOUR_TURN");
-								clients.get((currentTurnIndex + 1) % 2).send("WAIT");
+								currentTurnIndex = (currentTurnIndex + 1) % clients.size(); //calc whose turn it is
+								clients.get(currentTurnIndex).send("YOUR_TURN"); // this is curr player
+								for (int i = 0; i < clients.size(); i++) {
+									if (i != currentTurnIndex) {
+										clients.get(i).send("WAIT"); // if its not their turn they wait.
+									}
+								}
 							}else {
 								send("WAIT_YOUR_TURN");
 							}

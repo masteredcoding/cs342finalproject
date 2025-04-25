@@ -44,7 +44,7 @@ public class Client extends Thread{
 				System.out.println(message);
 
 				if (message.equals("WAIT_FOR_PLAYERS")) {
-					chatLog.appendText("yo wait yo turn");
+					chatLog.appendText("Waiting for another player...\n");
 				}
 
 				if (!selfMessage){

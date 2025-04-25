@@ -225,6 +225,7 @@ public class GuiClient extends Application{
 		Scene selectionScene = new Scene(selectionBackground, 800, 600);
 
 		returnButton.setOnAction(e -> {
+			resetGame();
 			primaryStage.setScene(selectionScene);
 			primaryStage.setTitle("Selection Menu");
 		});
@@ -310,6 +311,24 @@ public class GuiClient extends Application{
 		return false;
 	}
 
+	void resetGame(){
+		for (int r = 0; r < 6; r++){ // makes 6 rows for gameboard
+			for (int c = 0; c < 7; c++){ // makes 6 cols for gameboard
+				board[r][c] = 0;
+				boardCircles[r][c].setFill(Color.WHITE);
+			}
+		}
+		turn.setText("Your Turn!");
+		c1.setDisable(false);
+		c2.setDisable(false);
+		c3.setDisable(false);
+		c4.setDisable(false);
+		c5.setDisable(false);
+		c6.setDisable(false);
+		c7.setDisable(false);
+		returnButton.setVisible(false);
+	}
+
 
 	int findEmptyRow(int col) {
 		for (int row = 5; row >= 0; row--) {
@@ -326,7 +345,7 @@ public class GuiClient extends Application{
 		int row = findEmptyRow(col);
 		if (row == -1){
 
-			chatLog.appendText("Spot is full..!");
+			chatLog.appendText("Spot is full..!\n");
 			return;
 		}
 
