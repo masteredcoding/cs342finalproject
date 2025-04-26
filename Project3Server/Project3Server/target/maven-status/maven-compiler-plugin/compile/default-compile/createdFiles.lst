@@ -1,3 +1,4 @@
+Server$GameSession.class
 Server.class
 GuiServer.class
 Message.class

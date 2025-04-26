@@ -1,107 +1,95 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.net.Socket;
-import java.util.function.Consumer;
+
+import javafx.application.Platform;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
-
-
-
-public class Client extends Thread{
-
+public class Client extends Thread {
 
 	Socket socketClient;
-
 	ObjectOutputStream out;
 	ObjectInputStream in;
 	TextArea chatLog;
 	TextField chatInput;
-	boolean	selfMessage = false;
-	GuiClient gui;
+	boolean selfMessage = false;
+	private GuiClient guiClient;
 
-	public Client(TextArea chatLog, GuiClient gui) {
+	// Add game status
+	private boolean myTurn = false;
+
+	public Client(TextArea chatLog) {
 		this.chatLog = chatLog;
-		this.gui = gui;
+	}
+	public void setGuiClient(GuiClient guiClient) {
+		this.guiClient = guiClient;
 	}
 
 
 	public void run() {
-
 		try {
-			socketClient= new Socket("127.0.0.1",5555);
-	    	out = new ObjectOutputStream(socketClient.getOutputStream());
-	    	in = new ObjectInputStream(socketClient.getInputStream());
-	   	 	socketClient.setTcpNoDelay(true);
-
-		}
-		catch(Exception e) {}
-
-		while(true) {
-
-			try {
-				String message = in.readObject().toString();
-				System.out.println(message);
-				if (message.equals("USERNAME_TAKEN")) {
-					chatLog.appendText("Username is already taken! Please restart and choose another username.\n");
-					socketClient.close();
-					break; // ⬅️ stop the Client thread
-				}
-				if (message.equals("WAIT_FOR_PLAYERS")) {
-					gui.switchToGameScene(); // NEW 🔥 still switch if you are first
-					chatLog.appendText("Waiting for another player...\n");
-				} else if (message.startsWith("MOVE ")) {
-					int col = Integer.parseInt(message.substring(5)); // Extract number
-					gui.opponentMove(col); // Tell GUI opponent made a move
-					continue;
-				} else if (message.equals("YOUR_TURN")) {
-					gui.setYourTurn(true);
-					gui.switchToGameScene(); // NEW 🔥 switch when ready
-					continue;
-				} else if (message.equals("WAIT")) {
-					gui.setYourTurn(false);
-					gui.switchToGameScene(); // 🔥 ADD THIS LINE
-					continue;
-				} else if (message.startsWith("ROOM_LIST ")) {
-					String rooms = message.substring(10);
-					javafx.application.Platform.runLater(() -> {
-						gui.showRoomButtons(rooms);
-					});
-
-				}
-				else if (message.equals("OPPONENT_DISCONNECTED")) {
-					chatLog.appendText("Your opponent has disconnected.\n");
-					gui.returnButton.setVisible(true);
-					gui.disableButtons();
-					gui.turn.setText("Opponent left. You win by default!");
-				}
-
-
-				else if (message.equals("JOIN_FAILED")) {
-					chatLog.appendText("Room not found! Please refresh.\n");
-				}else {
-					if (!selfMessage) {
-						chatLog.appendText("Other: " + message + "\n");
-					}
-					selfMessage = false;
-				}
-			}
-			catch(Exception e) {}
-		}
-
-    }
-
-	public void send(String data) {
-
-		try {
-			selfMessage = true; //since we first send this is triggered
-			out.writeObject(data);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.err.println("Failed to send message to server!");
+			socketClient = new Socket("127.0.0.1", 5555);
+			out = new ObjectOutputStream(socketClient.getOutputStream());
+			in = new ObjectInputStream(socketClient.getInputStream());
+			socketClient.setTcpNoDelay(true);
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
+
+		while (true) {
+			try {
+				String message = (String) in.readObject();
+				System.out.println("Server sent: " + message);
+
+				Platform.runLater(() -> processMessage(message));
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				break;
+			}
+		}
+	}
+
+	private void processMessage(String message) {
+		if (message.equals("WAIT_FOR_PLAYERS")) {
+			chatLog.appendText("Waiting for another player...\n");
+		} else if (message.equals("YOUR_TURN")) {
+			myTurn = true;
+			chatLog.appendText("Your turn!\n");
+			// Here you can call a method to enable drop buttons
+		} else if (message.equals("WAIT")) {
+			myTurn = false;
+			chatLog.appendText("Waiting for opponent's move...\n");
+			// Here you can call a method to disable drop buttons
+		} else if (message.startsWith("MOVE")) {
+			String moveData = message.substring(5);
+			int col = Integer.parseInt(moveData);
+
+			if (guiClient != null) {
+				boolean isMyMove = myTurn; // because we switch turns after sending
+				guiClient.applyMove(col, isMyMove);
+			}
+		}
+		else {
+			if (!selfMessage) {
+				chatLog.appendText("Other: " + message + "\n");
+			}
+			selfMessage = false;
+		}
+	}
+
+	public void send(String data) {
+		try {
+			selfMessage = true;
+			out.writeObject(data);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public boolean isMyTurn() {
+		return myTurn;
 	}
 }
