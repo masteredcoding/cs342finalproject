@@ -7,8 +7,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -28,11 +26,9 @@ public class GuiClient extends Application {
 	TextArea chatLog;
 	Text turn;
 	Button returnButton;
-	Button playAgainButton; // NEW
-
+	Button playAgainButton;
 	Client clientThread;
 	boolean gameOver = false;
-
 
 	public static void main(String[] args) {
 		launch(args);
@@ -73,7 +69,7 @@ public class GuiClient extends Application {
 		chatLog.setPrefHeight(200);
 
 		clientThread = new Client(chatLog);
-		clientThread.setGuiClient(this); // NEW
+		clientThread.setGuiClient(this);
 		clientThread.start();
 
 		TextField chatInput = new TextField();
@@ -127,12 +123,10 @@ public class GuiClient extends Application {
 		returnButton = new Button("Return to Menu");
 		returnButton.setVisible(false);
 
-		playAgainButton = new Button("Play Again"); // NEW
+		playAgainButton = new Button("Play Again");
 		playAgainButton.setVisible(false);
 
-
 		VBox headerAndTurns = new VBox(20, title, turn, playAgainButton, returnButton, boardAndChat);
-
 		headerAndTurns.setAlignment(Pos.CENTER);
 		headerAndTurns.setPadding(new Insets(0, 0, 90, 0));
 
@@ -187,7 +181,6 @@ public class GuiClient extends Application {
 			primaryStage.setScene(gameScene);
 			title.setText("Connect 4: LAN Multiplayer");
 			primaryStage.show();
-			setupMoveListener();
 		});
 
 		returnButton.setOnAction(e -> {
@@ -195,35 +188,12 @@ public class GuiClient extends Application {
 			primaryStage.setScene(selectionScene);
 			primaryStage.setTitle("Selection Menu");
 		});
+
 		playAgainButton.setOnAction(e -> {
 			resetGame();
 			playAgainButton.setVisible(false);
 		});
-
 	}
-
-	void setupMoveListener() {
-		new Thread(() -> {
-			while (true) {
-				try {
-					Thread.sleep(100);
-
-					if (gameOver) {
-						continue; // NEW: skip updating turn label if game over
-					}
-
-					if (clientThread != null && clientThread.isMyTurn()) {
-						Platform.runLater(() -> turn.setText("Your Turn!"));
-					} else {
-						Platform.runLater(() -> turn.setText("Opponent's Turn"));
-					}
-				} catch (Exception e) {
-					break;
-				}
-			}
-		}).start();
-	}
-
 
 	void disableButtons() {
 		c1.setDisable(true);
@@ -269,7 +239,6 @@ public class GuiClient extends Application {
 		c6.setDisable(false);
 		c7.setDisable(false);
 		returnButton.setVisible(false);
-		returnButton.setVisible(false);
 		playAgainButton.setVisible(false);
 		gameOver = false;
 	}
@@ -285,7 +254,6 @@ public class GuiClient extends Application {
 
 	void dropPiece(int col) {
 		if (vsBot) {
-			// Bot vs player mode
 			int row = findEmptyRow(col);
 			if (row == -1) {
 				chatLog.appendText("Spot is full..!\n");
@@ -320,44 +288,32 @@ public class GuiClient extends Application {
 			}
 			turn.setText("Your Turn");
 		} else {
-			// LAN Multiplayer
 			if (!clientThread.isMyTurn()) {
 				chatLog.appendText("Not your turn!\n");
 				return;
 			}
-
 			int row = findEmptyRow(col);
 			if (row == -1) {
 				chatLog.appendText("Spot is full..!\n");
 				return;
 			}
-
-			clientThread.send("" + col); // Send the column to servedr
+			clientThread.send("" + col);
+			turn.setText("Opponent's Turn");
 		}
 	}
+
 	public void applyMove(int col, boolean isMyMove) {
 		int row = findEmptyRow(col);
 		if (row == -1) {
-			return; // Should not happen if server is correct
+			return;
 		}
-
-		int playerNumber = isMyMove ? 1 : 2; // 1 = you (red), 2 = opponent (yellow)
-
+		int playerNumber = isMyMove ? 1 : 2;
 		board[row][col] = playerNumber;
-		if (playerNumber == 1) {
-			boardCircles[row][col].setFill(Color.RED);
-		} else {
-			boardCircles[row][col].setFill(Color.YELLOW);
-		}
+		boardCircles[row][col].setFill(playerNumber == 1 ? Color.RED : Color.YELLOW);
 
-		// ✅ After applying the move, check if the player who made the move won
 		if (checkForWin(playerNumber)) {
-			gameOver = true; // 🛠 ADD THIS
-			if (isMyMove) {
-				turn.setText("You Won! Click Return to Menu.");
-			} else {
-				turn.setText("You Lost! Click Return to Menu.");
-			}
+			gameOver = true;
+			turn.setText(isMyMove ? "You Won! Click Return to Menu." : "You Lost! Click Return to Menu.");
 			disableButtons();
 			returnButton.setVisible(true);
 			playAgainButton.setVisible(true);
@@ -365,25 +321,25 @@ public class GuiClient extends Application {
 		}
 
 		if (isBoardFull()) {
-			gameOver = true; // 🛠 ADD THIS
+			gameOver = true;
 			turn.setText("It's a Draw! Click Return to Menu.");
 			disableButtons();
 			returnButton.setVisible(true);
 			playAgainButton.setVisible(true);
+			return;
 		}
 
+		if (!gameOver) {
+			turn.setText(isMyMove ? "Opponent's Turn" : "Your Turn!");
+		}
 	}
-
-
 
 	private boolean isBoardFull() {
 		for (int col = 0; col < 7; col++) {
 			if (findEmptyRow(col) != -1) {
-				return false; // still empty spot found
+				return false;
 			}
 		}
-		return true; // no empty spots, board full
+		return true;
 	}
-
-
 }
