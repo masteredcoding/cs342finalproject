@@ -28,7 +28,11 @@ public class GuiClient extends Application {
 	TextArea chatLog;
 	Text turn;
 	Button returnButton;
+	Button playAgainButton; // NEW
+
 	Client clientThread;
+	boolean gameOver = false;
+
 
 	public static void main(String[] args) {
 		launch(args);
@@ -123,7 +127,12 @@ public class GuiClient extends Application {
 		returnButton = new Button("Return to Menu");
 		returnButton.setVisible(false);
 
-		VBox headerAndTurns = new VBox(20, title, turn, returnButton, boardAndChat);
+		playAgainButton = new Button("Play Again"); // NEW
+		playAgainButton.setVisible(false);
+
+
+		VBox headerAndTurns = new VBox(20, title, turn, playAgainButton, returnButton, boardAndChat);
+
 		headerAndTurns.setAlignment(Pos.CENTER);
 		headerAndTurns.setPadding(new Insets(0, 0, 90, 0));
 
@@ -186,14 +195,23 @@ public class GuiClient extends Application {
 			primaryStage.setScene(selectionScene);
 			primaryStage.setTitle("Selection Menu");
 		});
+		playAgainButton.setOnAction(e -> {
+			resetGame();
+			playAgainButton.setVisible(false);
+		});
+
 	}
 
 	void setupMoveListener() {
-		// start listening for move updates
 		new Thread(() -> {
 			while (true) {
 				try {
 					Thread.sleep(100);
+
+					if (gameOver) {
+						continue; // NEW: skip updating turn label if game over
+					}
+
 					if (clientThread != null && clientThread.isMyTurn()) {
 						Platform.runLater(() -> turn.setText("Your Turn!"));
 					} else {
@@ -205,6 +223,7 @@ public class GuiClient extends Application {
 			}
 		}).start();
 	}
+
 
 	void disableButtons() {
 		c1.setDisable(true);
@@ -250,6 +269,9 @@ public class GuiClient extends Application {
 		c6.setDisable(false);
 		c7.setDisable(false);
 		returnButton.setVisible(false);
+		returnButton.setVisible(false);
+		playAgainButton.setVisible(false);
+		gameOver = false;
 	}
 
 	int findEmptyRow(int col) {
@@ -330,32 +352,28 @@ public class GuiClient extends Application {
 
 		// ✅ After applying the move, check if the player who made the move won
 		if (checkForWin(playerNumber)) {
+			gameOver = true; // 🛠 ADD THIS
 			if (isMyMove) {
-				showEndGameAlert("You Won!");
+				turn.setText("You Won! Click Return to Menu.");
 			} else {
-				showEndGameAlert("You Lost!");
+				turn.setText("You Lost! Click Return to Menu.");
 			}
 			disableButtons();
 			returnButton.setVisible(true);
+			playAgainButton.setVisible(true);
 			return;
 		}
 
-		// ✅ If no win, check if board is full (DRAW)
 		if (isBoardFull()) {
-			showEndGameAlert("It's a Draw!");
+			gameOver = true; // 🛠 ADD THIS
+			turn.setText("It's a Draw! Click Return to Menu.");
 			disableButtons();
 			returnButton.setVisible(true);
+			playAgainButton.setVisible(true);
 		}
-	}
-	private void showEndGameAlert(String message) {
-		javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-		alert.setTitle("Game Over");
-		alert.setHeaderText(null);
-		alert.setContentText(message);
-		alert.showAndWait();
 
-		turn.setText(message); // Also update the label after closing popup
 	}
+
 
 
 	private boolean isBoardFull() {
