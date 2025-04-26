@@ -36,9 +36,13 @@ public class GuiClient extends Application{
 	int board[][] = new int[6][7];
 	Circle[][] boardCircles = new Circle[6][7]; // 0 will represent empty so we got a 6x7 with 0's
 	Button c1,c2,c3,c4,c5,c6,c7;
+	Button joinRoomButton; // <== add this at top
 	TextArea chatLog;
 	Text turn;
 	Button returnButton;
+	Client clientThread;
+	VBox roomListBox = new VBox(10);
+	Scene gameScene;
 
 
 	@Override
@@ -46,6 +50,7 @@ public class GuiClient extends Application{
 		// setup the background with a blue color
 		BorderPane background = new BorderPane();
 		background.setStyle("-fx-background-color: #373C3F;");
+
 
 		GridPane gameBoard = new GridPane();
 		gameBoard.setStyle("-fx-background-color: #2E2E2E; -fx-background-radius: 20; -fx-padding: 20;");
@@ -75,7 +80,7 @@ public class GuiClient extends Application{
 		chatLog.setEditable(false);
 		chatLog.setWrapText(true);
 		chatLog.setPrefHeight(200);
-		Client clientThread = new Client(chatLog);
+		clientThread = new Client(chatLog, this);
 		clientThread.start();
 
 		TextField chatInput = new TextField();
@@ -208,7 +213,7 @@ public class GuiClient extends Application{
 		headerAndTurns.setMargin(turn,new Insets(-20,0,0,0));
 
 		background.setCenter(headerAndTurns);
-		Scene gameScene = new Scene(background, 800, 600);
+		gameScene = new Scene(background, 800, 600);
 		// end of gameScene
 
 
@@ -238,13 +243,56 @@ public class GuiClient extends Application{
 			primaryStage.show();
 		});
 
-		lanPlay.setOnAction(e -> {
-			vsBot = false;
-			primaryStage.setScene(gameScene);
-			primaryStage.setTitle("Connect 4: LAN Multiplayer");
-			primaryStage.show();
+		BorderPane roomBackground = new BorderPane();
+		roomBackground.setStyle("-fx-background-color: #373C3F;");
+		Text roomTitle = new Text("Create or Join a Room");
+		TextField roomInput = new TextField();
+		roomInput.setPromptText("Enter Room Name...");
+		roomInput.setMaxWidth(150);
+		Button createRoomButton = new Button("Create Room");
+		joinRoomButton = new Button("Join Room");
+		Button refreshRoomsButton = new Button("Refresh Rooms");
+		roomListBox.setAlignment(Pos.CENTER);
+		refreshRoomsButton.setOnAction(e -> {
+			clientThread.send("REQUEST_ROOMS");
 		});
 
+		VBox roomLayout = new VBox(20, roomTitle, roomInput, createRoomButton, joinRoomButton, refreshRoomsButton, roomListBox);
+
+
+		roomLayout.setAlignment(Pos.CENTER);
+		roomBackground.setCenter(roomLayout);
+		Scene roomScene = new Scene(roomBackground, 800, 600);
+
+		// Button actions for Create/Join Room
+		createRoomButton.setOnAction(e -> {
+			String roomName = roomInput.getText();
+			if (!roomName.isEmpty()) {
+				clientThread.send("CREATE_ROOM " + roomName);
+				vsBot = false;
+				primaryStage.setScene(gameScene);
+				primaryStage.setTitle("Connect 4: Room - " + roomName);
+			}
+		});
+
+		joinRoomButton.setOnAction(e -> {
+			String roomName = roomInput.getText();
+			if (!roomName.isEmpty()) {
+				clientThread.send("JOIN_ROOM " + roomName);
+				vsBot = false;
+				// DO NOT immediately switch scenes!!
+				// Wait until the server replies first
+			}
+		});
+
+
+		lanPlay.setOnAction(e -> {
+			primaryStage.setScene(roomScene);
+			primaryStage.setTitle("Room Selection");
+			primaryStage.show();
+
+			clientThread.send("REQUEST_ROOMS"); // 👈 ADD THIS LINE when entering room selection
+		});
 
 
 
@@ -268,7 +316,6 @@ public class GuiClient extends Application{
 			primaryStage.show();
 		});
 
-
 		VBox menuLayout = new VBox(20, loginTitle, userNameInput, login);  // 20 is the spacing between elements
 		menuLayout.setAlignment(Pos.CENTER);    // Center the button both horizontally and vertically
 
@@ -279,6 +326,7 @@ public class GuiClient extends Application{
 		primaryStage.setTitle("Game Menu");
 		primaryStage.show();
 	}
+
 
 	void disableButtons(){
 		c1.setDisable(true);
@@ -338,20 +386,33 @@ public class GuiClient extends Application{
 		}
 		return -1;
 	}
-	void dropPiece(int col){
-		if (vsBot != true){ // if it is not a bot game we do not wanna be here bro
-			return;
+	void enableButtons(){
+		c1.setDisable(false);
+		c2.setDisable(false);
+		c3.setDisable(false);
+		c4.setDisable(false);
+		c5.setDisable(false);
+		c6.setDisable(false);
+		c7.setDisable(false);
+	}
+	void dropPiece(int col) {
+		if (vsBot) {
+			dropPieceVsBot(col);
+		} else {
+			dropPieceLAN(col);
 		}
+	}
+	void dropPieceVsBot(int col) {
 		int row = findEmptyRow(col);
-		if (row == -1){
-
+		if (row == -1) {
 			chatLog.appendText("Spot is full..!\n");
 			return;
 		}
 
-		board[row][col] = 1; // 1 represents player piece
+		board[row][col] = 1;
 		boardCircles[row][col].setFill(Color.RED);
-		if (checkForWin(1)){
+
+		if (checkForWin(1)) {
 			turn.setText("You won!");
 			returnButton.setVisible(true);
 			disableButtons();
@@ -360,21 +421,107 @@ public class GuiClient extends Application{
 		turn.setText("Bot's Turn");
 
 		Random r = new Random();
-
 		int botCol = r.nextInt(7);
 		int botRow = findEmptyRow(botCol);
-
-		while (botRow == -1){
+		while (botRow == -1) {
 			botCol = r.nextInt(7);
 			botRow = findEmptyRow(botCol);
 		}
-		board[botRow][botCol] = 2; // 2 represents bot piece this will help me in check win
+
+		board[botRow][botCol] = 2;
 		boardCircles[botRow][botCol].setFill(Color.YELLOW);
-		if (checkForWin(2)){
-			returnButton.setVisible(true);
+
+		if (checkForWin(2)) {
 			turn.setText("Bot won!");
+			returnButton.setVisible(true);
+			disableButtons();
+		} else {
+			turn.setText("Your Turn");
+		}
+	}
+	void dropPieceLAN(int col) {
+		int row = findEmptyRow(col);
+		if (row == -1) {
+			chatLog.appendText("Spot is full..!\n");
 			return;
 		}
-		turn.setText("Your Turn");
+
+		board[row][col] = 1; // Your piece
+		boardCircles[row][col].setFill(Color.RED);
+
+		if (checkForWin(1)) {
+			turn.setText("You won!");
+			returnButton.setVisible(true);
+			disableButtons();
+			return;
+		}
+
+		clientThread.send("MOVE " + col); // send to server
+		disableButtons();
+		turn.setText("Opponent's Turn...");
 	}
+
+
+	void opponentMove(int col) {
+		int row = findEmptyRow(col);
+		if (row == -1) {
+			chatLog.appendText("Opponent tried invalid move!\n");
+			return;
+		}
+
+		board[row][col] = 2; // Opponent is player 2
+		boardCircles[row][col].setFill(Color.YELLOW);
+
+		if (checkForWin(2)) {
+			turn.setText("Opponent won!");
+			returnButton.setVisible(true);
+			disableButtons();
+		} else {
+			// Now your turn
+			turn.setText("Your Turn!");
+			enableButtons();
+		}
+	}
+	void setYourTurn(boolean yourTurn) {
+		if (yourTurn) {
+			turn.setText("Your Turn!");
+			enableButtons();
+		} else {
+			turn.setText("Opponent's Turn...");
+			disableButtons();
+		}
+	}
+	public void showRoomButtons(String roomList) {
+		roomListBox.getChildren().clear();
+
+		if (roomList.trim().equals("EMPTY")) {
+			roomListBox.getChildren().add(new Text("No active rooms."));
+			joinRoomButton.setDisable(true); // 🔥 disable Join button
+		} else {
+			String[] roomNames = roomList.split(",");
+			boolean hasRoom = false;
+			for (String room : roomNames) {
+				if (!room.isBlank()) {
+					Button roomBtn = new Button("Join: " + room.trim());
+					roomBtn.setOnAction(e -> clientThread.send("JOIN_ROOM " + room.trim()));
+					roomListBox.getChildren().add(roomBtn);
+					hasRoom = true;
+				}
+			}
+			joinRoomButton.setDisable(!hasRoom); // 🔥 enable only if rooms exist
+		}
+	}
+
+
+	public void switchToGameScene() {
+		Stage stage = (Stage) chatLog.getScene().getWindow();
+		stage.setScene(gameScene);
+		stage.setTitle("Connect 4");
+	}
+
+
+
+
+
+
 }
