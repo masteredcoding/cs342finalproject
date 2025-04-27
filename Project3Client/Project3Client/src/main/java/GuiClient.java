@@ -36,6 +36,7 @@ public class GuiClient extends Application {
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
+
 		BorderPane background = new BorderPane();
 		background.setStyle("-fx-background-color: #373C3F;");
 
@@ -220,8 +221,24 @@ public class GuiClient extends Application {
 				}
 			}
 		}
+		for (int row = 3; row < 6; row++) {
+			for (int col = 0; col < 4; col++) {
+				if (board[row][col] == player && board[row-1][col+1] == player && board[row-2][col+2] == player && board[row-3][col+3] == player) {
+					return true;
+				}
+			}
+		}
+		for (int row = 0; row < 3; row++) {
+			for (int col = 0; col < 4; col++) {
+				if (board[row][col] == player && board[row+1][col+1] == player && board[row+2][col+2] == player && board[row+3][col+3] == player) {
+					return true;
+				}
+			}
+		}
+
 		return false;
 	}
+
 
 	void resetGame() {
 		for (int r = 0; r < 6; r++) {
@@ -256,7 +273,7 @@ public class GuiClient extends Application {
 		if (vsBot) {
 			int row = findEmptyRow(col);
 			if (row == -1) {
-				chatLog.appendText("Spot is full..!\n");
+				chatLog.appendText("Spot is full!\n");
 				return;
 			}
 			board[row][col] = 1;
@@ -307,13 +324,28 @@ public class GuiClient extends Application {
 		if (row == -1) {
 			return;
 		}
-		int playerNumber = isMyMove ? 1 : 2;
+		int playerNumber;
+		if (isMyMove) {
+			playerNumber = 1;
+		}
+		else{
+			playerNumber = 2;
+		}
 		board[row][col] = playerNumber;
-		boardCircles[row][col].setFill(playerNumber == 1 ? Color.RED : Color.YELLOW);
+		if (playerNumber ==1){
+			boardCircles[row][col].setFill(Color.RED);
+		}
+		else{
+			boardCircles[row][col].setFill(Color.YELLOW);
+		}
 
 		if (checkForWin(playerNumber)) {
 			gameOver = true;
-			turn.setText(isMyMove ? "You Won! Click Return to Menu." : "You Lost! Click Return to Menu.");
+			if (isMyMove) {
+				turn.setText("You Won! Click Return to Menu.");
+			} else {
+				turn.setText("You Lost! Click Return to Menu.");
+			}
 			disableButtons();
 			returnButton.setVisible(true);
 			playAgainButton.setVisible(true);
@@ -330,8 +362,16 @@ public class GuiClient extends Application {
 		}
 
 		if (!gameOver) {
-			turn.setText(isMyMove ? "Opponent's Turn" : "Your Turn!");
+			if (isMyMove) {
+
+				turn.setText("Opponent's Turn");
+			} else {
+				turn.setText("Your Turn!");
+			}
+
 		}
+
+
 	}
 
 	private boolean isBoardFull() {

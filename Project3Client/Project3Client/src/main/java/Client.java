@@ -16,8 +16,6 @@ public class Client extends Thread {
 	TextField chatInput;
 	boolean selfMessage = false;
 	private GuiClient guiClient;
-
-	// Add game status
 	private boolean myTurn = false;
 
 	public Client(TextArea chatLog) {
@@ -58,17 +56,15 @@ public class Client extends Thread {
 		} else if (message.equals("YOUR_TURN")) {
 			myTurn = true;
 			chatLog.appendText("Your turn!\n");
-			// Here you can call a method to enable drop buttons
 		} else if (message.equals("WAIT")) {
 			myTurn = false;
 			chatLog.appendText("Waiting for opponent's move...\n");
-			// Here you can call a method to disable drop buttons
 		} else if (message.startsWith("MOVE")) {
 			String moveData = message.substring(5);
 			int col = Integer.parseInt(moveData);
 
 			if (guiClient != null) {
-				boolean isMyMove = myTurn; // because we switch turns after sending
+				boolean isMyMove = myTurn;
 				guiClient.applyMove(col, isMyMove);
 			}
 		}

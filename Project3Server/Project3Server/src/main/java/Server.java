@@ -63,7 +63,6 @@ public class Server {
 			try {
 				connection.close();
 			} catch (Exception e) {
-				// Ignore
 			}
 		}
 
@@ -99,14 +98,13 @@ public class Server {
 				}
 
 			} catch (Exception e) {
-				System.err.println("Streams not open for client #" + count);
 			}
 		}
 	}
 
 	class GameSession extends Thread {
 		ClientThread p1, p2;
-		int turn = 0; // 0 = p1's turn, 1 = p2's turn
+		int turn = 0;
 
 		GameSession(ClientThread p1, ClientThread p2) {
 			this.p1 = p1;
@@ -119,8 +117,16 @@ public class Server {
 				p2.send("WAIT");
 
 				while (true) {
-					ClientThread current = (turn == 0) ? p1 : p2;
-					ClientThread other = (turn == 0) ? p2 : p1;
+					ClientThread current;
+					ClientThread other;
+					if (turn == 0) {
+						current = p1;
+						other = p2;
+					} else {
+						current = p2;
+						other = p1;
+					}
+
 
 					String move = current.receive();
 					if (move.contains("CHAT ")) {
@@ -137,9 +143,6 @@ public class Server {
 					}
 				}
 			} catch (Exception e) {
-				System.out.println("A player disconnected. Ending session.");
-				p1.connectionCleanup();
-				p2.connectionCleanup();
 			}
 		}
 	}
