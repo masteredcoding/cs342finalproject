@@ -28,7 +28,6 @@ public class Server {
 					count++;
 				}
 			} catch (Exception e) {
-				System.err.println("Server did not launch");
 			}
 		}
 	}
