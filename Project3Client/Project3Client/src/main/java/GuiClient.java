@@ -77,9 +77,9 @@ public class GuiClient extends Application {
 		chatInput.setOnAction(e -> {
 			String message = chatInput.getText();
 			if (!message.isEmpty()) {
+				clientThread.send("CHAT " + message);
 				chatLog.appendText("You: " + message + "\n");
 				chatInput.clear();
-				clientThread.send(message);
 			}
 		});
 
