@@ -3,7 +3,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import javafx.application.Platform;
+
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
@@ -43,7 +43,7 @@ public class Client extends Thread {
 				String message = (String) in.readObject();
 				System.out.println("Server sent: " + message);
 
-				Platform.runLater(() -> processMessage(message));
+				processMessage(message);
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -71,6 +71,10 @@ public class Client extends Thread {
 				boolean isMyMove = myTurn; // because we switch turns after sending
 				guiClient.applyMove(col, isMyMove);
 			}
+		}
+		else if (message.startsWith("CHAT ")) {
+			String chatData = message.substring(5);
+			chatLog.appendText("Other: " + chatData + "\n");
 		}
 		else {
 			if (!selfMessage) {
