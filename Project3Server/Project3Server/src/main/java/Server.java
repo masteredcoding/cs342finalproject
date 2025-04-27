@@ -123,13 +123,18 @@ public class Server {
 					ClientThread other = (turn == 0) ? p2 : p1;
 
 					String move = current.receive();
+					if (move.contains("CHAT ")) {
+						String message = move.substring(5);
+						current.send("CHAT " + message);
+						other.send("CHAT " + message);
+					}else {
+						p1.send("MOVE " + move);
+						p2.send("MOVE " + move);
 
-					p1.send("MOVE " + move);
-					p2.send("MOVE " + move);
-
-					turn = (turn + 1) % 2;
-					current.send("WAIT");
-					other.send("YOUR_TURN");
+						turn = (turn + 1) % 2;
+						current.send("WAIT");
+						other.send("YOUR_TURN");
+					}
 				}
 			} catch (Exception e) {
 				System.out.println("A player disconnected. Ending session.");
