@@ -1,6 +1,5 @@
 import java.util.Random;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -139,8 +138,8 @@ public class GuiClient extends Application {
 		Text selectionTitle = new Text("Choose your gamemode!");
 		Button aiPlayer = new Button("Bot vs Player");
 		Button lanPlay = new Button("Player vs Player");
-		Button howPlay = new Button("How to play?");
-		VBox selectionLayout = new VBox(20, selectionTitle, aiPlayer, lanPlay, howPlay);
+//		Button howPlay = new Button("How to play?");
+		VBox selectionLayout = new VBox(20, selectionTitle, aiPlayer, lanPlay);
 		selectionLayout.setAlignment(Pos.CENTER);
 		selectionBackground.setCenter(selectionLayout);
 		Scene selectionScene = new Scene(selectionBackground, 800, 600);
